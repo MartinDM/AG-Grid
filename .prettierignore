@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+
+# Build output
+build/
+dist/
+
+# Coverage and cache
+coverage/
+.cache/
+
+# Vite/Remix temp and assets
+.vite/
+public/build/
+
+# Logs
+*.log
+
+# Environment files
+.env
+.env.*
+
+# Misc
+.DS_Store

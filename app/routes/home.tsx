@@ -1,14 +1,25 @@
 import { AgGridReact } from 'ag-grid-react';
 import { ModuleRegistry, AllCommunityModule } from 'ag-grid-community';
-import { useState, useMemo } from 'react';
+import { useState, useRef, useMemo, useCallback } from 'react';
 
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-quartz.css';
 
+import type {
+  ICellRendererParams,
+  ValueFormatterParams,
+  ValueGetterParams,
+  RowClassParams,
+  ColDef,
+} from 'ag-grid-community';
+
+type RowType = { make: string; model: string; price: number; electric: boolean };
+type ButtonParams = ICellRendererParams<RowType> & { buttonText: string };
+
 // Register all Community features to avoid module registration errors
 ModuleRegistry.registerModules([AllCommunityModule]);
 
-export function meta({}: Route.MetaArgs) {
+export function meta() {
   return [
     { title: 'New React Router App' },
     { name: 'description', content: 'Welcome to React Router!' },
@@ -18,8 +29,23 @@ export function meta({}: Route.MetaArgs) {
 const MyCellComponent = ({ title }: { title: string }) => {
   return (
     <>
-      <button onClick={() => window.alert('Action')}>Add a {title} 🚘 </button>
+      <button onClick={() => window.alert('Action')}>Add a {title} </button>
     </>
+  );
+};
+
+const MakeComp = (p: ButtonParams) => {
+  const handleEmojiAlert = useCallback(
+    (e: React.MouseEvent<HTMLButtonElement>) =>
+      window.alert(`${e.currentTarget.value} — ${p.value}`),
+    [p.value],
+  );
+
+  return (
+    <div className={'flex gap-2'}>
+      <button onClick={handleEmojiAlert}>{p.buttonText}</button>
+      {p.value}
+    </div>
   );
 };
 
@@ -58,48 +84,72 @@ export default function Home() {
     { make: 'Mercedes', model: 'EQB', price: 62000, electric: true },
   ]);
 
+  const CounterComp = (p: ICellRendererParams<RowType>) => {
+    const renderCountRef = useRef(0);
+    return (
+      <p>
+        <b>
+          ({renderCountRef.current + 1}) - {p.value}
+        </b>
+      </p>
+    );
+  };
+
+  const TrueFalse = (p: ICellRendererParams<RowType>) => {
+    return Boolean(p.value) ? '☑️' : '🔴';
+  };
+
   const defaultColDef = useMemo(() => {
     return {
       flex: 1,
       filter: true,
       editable: true,
       floatingFilter: true,
+      cellRenderer: CounterComp,
     };
-  });
+  }, []);
 
-  const rowClassRules = useMemo(() => ({
-    'red-row': (p) => p.data.make == 'Toyota',
-  }));
+  const rowClassRules = useMemo(
+    () => ({
+      'featured-row': (p: RowClassParams<RowType>) => p.data?.make === 'Toyota',
+    }),
+    [],
+  );
 
   // Col definitions
-  const [colDefs, setColDefs] = useState([
+  const [colDefs, setColDefs] = useState<ColDef<RowType>[]>([
     {
       headerName: 'Make of Car',
+      cellRenderer: MakeComp,
+      cellRendererParams: { buttonText: '☕' },
       field: 'make',
-      flex: 1,
+      flex: 2,
       checkboxSelection: true,
       cellEditor: 'agSelectCellEditor',
       cellEditorParams: { values: ['Tesla', 'Toyota', 'Ford', 'Dodge'] },
-      valueGetter: (p) => p.data.make + ' ' + p.data.price,
+      valueGetter: (p: ValueGetterParams<RowType, string>) =>
+        `${p.data?.make ?? ''} ${p.data?.electric ? '🍃' : '🔥'}`,
     },
     { field: 'model' },
     {
       field: 'price',
-      valueFormatter: (p) => '£' + p.value,
+      cellRenderer: MakeComp,
+      valueFormatter: (p: ValueFormatterParams<RowType, number>) => '£' + p.value,
       cellClassRules: {
-        'green-cell': (p) => p.value > 30000,
+        'green-cell': (p) => Number(p.value) > 30000,
       },
     },
     {
       field: 'electric',
-      cellDataType: 'text',
+      cellDataType: 'boolean',
+      cellRenderer: TrueFalse,
       editable: false,
-      valueFormatter: (p) => (p.value === true || p.value === 'true' ? 'True' : 'False'),
+      valueFormatter: (p: ValueFormatterParams<RowType, boolean>) =>
+        p.value === true ? 'True' : 'False',
     },
     {
-      field: 'action',
       cellRenderer: MyCellComponent,
-      cellRendererParams: (p) => ({ title: p.data.model }),
+      cellRendererParams: (p: ICellRendererParams<RowType>) => ({ title: p.data?.model ?? '' }),
     },
   ]);
 
@@ -110,9 +160,8 @@ export default function Home() {
         rowData={rowData}
         columnDefs={colDefs}
         pagination={true}
-        paginagtionPageSizeSelector={[10, 20]}
-        paginagtionPageSize={10}
-        pageSize={10}
+        paginationPageSizeSelector={[10, 20]}
+        paginationPageSize={10}
         defaultColDef={defaultColDef}
         rowClassRules={rowClassRules}
       />

@@ -27,6 +27,10 @@ body {
   background-color: green;
 }
 
-.ag-row.red-row {
-  background-color: red;
+.ag-row.featured-row {
+  background-color: rgb(94, 88, 158);
+}
+
+.ag-row-selected.ag-row.featured-row {
+  background-color: rgb(115, 108, 192);
 }
